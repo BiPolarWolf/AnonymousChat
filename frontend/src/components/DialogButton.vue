@@ -20,7 +20,7 @@ const toggleDialog = () => {
   <div>
     <Button @click="toggleDialog">
       <slot name="button_data">
-        <i class="fa fa-pencil"></i>
+        Кнопка
       </slot>
     </Button>
     
@@ -29,7 +29,7 @@ const toggleDialog = () => {
 
       <div v-if="isOpen" ref="dialog" class="dialog">
         <div style="margin: 1em;">
-          <slot name="default"></slot>
+          <slot name="dialog_data"></slot>
         </div>
         <Button size="small" @click="toggleDialog" >Закрыть</Button>
       </div>

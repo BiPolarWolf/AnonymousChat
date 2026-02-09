@@ -1,21 +1,27 @@
 <script setup lang="ts">
-import { ref, inject } from 'vue'
+import { ref } from 'vue'
 import DialogButton from './DialogButton.vue'
 import Button from './Button.vue'
 
-const createBubble = inject<(text: string) => void>('createBubble')
+
 const messageText = ref('')
 
+const props = defineProps<{
+  handler: (messageText: string) => void
+}>()
+
 const handleSubmit = () => {
-  if (messageText.value.trim() && createBubble) {
-    createBubble(messageText.value)
+  if (messageText.value.trim()) {
+    props.handler(messageText.value)
     messageText.value = ''
   }
 }
+
 </script>
 
 <template>
   <DialogButton>
+    <template #dialog_data>
     <h3>Создать сообщение</h3>
     <form @submit.prevent="handleSubmit">
       <input 
@@ -26,6 +32,11 @@ const handleSubmit = () => {
       />
       <Button size="small" type="submit">Создать</Button>
     </form>
+    </template>
+
+    <template #button_data>
+        <i class="fa fa-pencil"></i>
+    </template>
   </DialogButton>
 </template>
 

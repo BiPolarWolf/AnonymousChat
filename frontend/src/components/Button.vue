@@ -10,7 +10,6 @@ defineProps<{
     <button class="btn" :class="size === 'small' ? 'btn-small' : 'btn-normal'">
         <slot name="default"></slot>
     </button>
-
 </template>
 
 <style scoped>

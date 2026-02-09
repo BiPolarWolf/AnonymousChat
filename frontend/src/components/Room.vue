@@ -1,42 +1,32 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, provide } from 'vue'
+import { onMounted, onUnmounted, ref } from 'vue'
 import Matter from 'matter-js'
 import Button from './Button.vue'
-
+import CreateBubbleDialog from './CreateBubbleDialog.vue'
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 
 let engine: Matter.Engine
 let render: Matter.Render
 let runner: Matter.Runner
-let intervalId: number
+// let intervalId: number
 
 
 // id Пузыря на который навели сейчас
 let hoveredBodyId : number | null = null;
 
 
-let createMessageTime_in_second = 10
+// let createMessageTime_in_second = 10
 let border_radius_message = 20
 let message_box_color = '#616161'
 let message_box_hover = '#706f6f'
-
+let text_font = '25px sans-serif'
 let room_background_color = '#2b2b2b'
 
 const bodies: Matter.Body[] = []
 const composite = Matter.Composite
 
 
-const messages = [
-  'Привет!',
-  'Как дела?',
-  'Отлично!',
-  'Круто',
-  'Интересно',
-  'Супер!',
-  'Ого',
-  'Вау'
-]
 
 const wallOptions = { isStatic: true, render: { fillStyle: room_background_color} }
 
@@ -112,25 +102,33 @@ const mouseOnBubbleEvent = (event:any) =>{
 }
 
 
+
 // функция которая отвечает за создание нового пузыря
-function createBubbleEvent(text?: string) {
-  const bubbleText = text || messages[Math.floor(Math.random() * messages.length)]
-  const x = Math.random() * (window.innerWidth - 150) + 75
-  const y = Math.random() * (window.innerHeight - 150) + 75
+function createBubbleEvent(text: string) {
   
-  // const circle = Matter.Bodies.circle(x, y, 60, {
-  //   restitution: 1,
-  //   friction: 0,
-  //   frictionAir: 0.1,
-  //   density: 0.001,
-  //   render: {
-  //     fillStyle: '#3b82f6',
-  //   },
-  //   label: text
-  // })
+  // Создаем временный canvas для измерения текста
+  const tempCanvas = document.createElement('canvas')
+  const tempContext = tempCanvas.getContext('2d')
+  if (!tempContext) return
+  
+  // Устанавливаем тот же шрифт, что используется в setBubbleTextEvent
+  tempContext.font = text_font
+  
+  // Измеряем ширину текста
+  const textMetrics = tempContext.measureText(text)
+  const textWidth = textMetrics.width
+  
+  // Добавляем отступы (padding) к ширине текста
+  const padding = 40
+  const bubbleWidth =  textWidth + padding
+  const bubbleHeight = 60
+  
+  const x = Math.random() * (window.innerWidth - bubbleWidth) + bubbleWidth / 2
+  const y = Math.random() * (window.innerHeight - bubbleHeight) + bubbleHeight / 2
+  
 
   const rectangle = Matter.Bodies.rectangle(
-    x,y,150,60, {
+    x, y, bubbleWidth, bubbleHeight, {
     chamfer: { radius: border_radius_message },
     restitution: 1,
     friction: 0,
@@ -139,7 +137,7 @@ function createBubbleEvent(text?: string) {
     render: {
       fillStyle: message_box_color,
     },
-    label: bubbleText
+    label: text
   }
   )
   
@@ -167,7 +165,7 @@ function setBubbleTextEvent(){
  
       const pos = body.position
       context.fillStyle = '#ffffff'
-      context.font = '1.5em sans-serif'
+      context.font = text_font
       context.textAlign = 'center'
       context.textBaseline = 'middle'
       context.fillText(body.label, pos.x, pos.y)
@@ -192,7 +190,6 @@ function applyFloatingForces() {
 onMounted(() => {
   if (!canvas.value) return
 
-  provide('createBubble', createBubbleEvent)
 
 
   // создаем экземпляр движка
@@ -245,12 +242,12 @@ onMounted(() => {
 
   set_adaptive()
 
-  intervalId = setInterval(createBubbleEvent, (createMessageTime_in_second * 1000 ))
-  createBubbleEvent()
+  // intervalId = setInterval(createBubbleEvent, (createMessageTime_in_second * 1000 ))
+  // createBubbleEvent()
 })
 
 onUnmounted(() => {
-  clearInterval(intervalId)
+  // clearInterval(intervalId)
   Matter.Render.stop(render)
   Matter.Runner.stop(runner)
   Matter.Engine.clear(engine)
@@ -262,7 +259,8 @@ onUnmounted(() => {
     <canvas ref="canvas"></canvas>
     
     <Teleport to="#navbar-buttons">
-      <Button @click="() => console.log('Первая кнопка')">🚀 Взаимодействовать</Button>
+      <CreateBubbleDialog :handler="createBubbleEvent">
+      </CreateBubbleDialog>
       <Button @click="() => console.log('Вторая кнопка')">🔄 Сброс баблов</Button>
     </Teleport>
   </div>
