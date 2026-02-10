@@ -22,8 +22,13 @@ async function get_room_history(){
 }
 
 
-function send_new_message(text:string){
-    let json_data  = JSON.stringify({text:text,color:message_color})
+function send_new_message(data: {text: string, seconds: number}){
+    let json_data  = JSON.stringify({
+      text:data.text,
+      color:message_color,
+      seconds:data.seconds,
+      time_create:Date.now()
+    })
     socket.send(json_data)
 }
 
@@ -38,8 +43,10 @@ socket.onmessage = function(event) {
 type MessageType = {
   text:string,
   color:string,
-  timestamp:any
+  seconds:number
+  time_create:number
 }
+
 
 // функция которая отвечает за создание нового пузыря
 function createBubbleEvent(message: MessageType) {
@@ -103,7 +110,8 @@ function createBubbleEvent(message: MessageType) {
       originColor : message['color'],
       lines: lines,
       opacity: 0,
-      scale: 0.5
+      scale: 0.5,
+      timer: 0
     }
   }
   )
@@ -111,6 +119,26 @@ function createBubbleEvent(message: MessageType) {
 
   bodies.push(rectangle)
   composite.add(engine.world,rectangle)
+
+
+  const current_time = Date.now()
+  const second_passed = (current_time - message.time_create) / 1000
+  const remaining_seconds = message.seconds - second_passed
+
+  rectangle.plugin.timer = Math.ceil(remaining_seconds)
+
+  let intervalId = setInterval(() => {
+    rectangle.plugin.timer -= 1
+  }, 1000);
+
+  setTimeout(() => {
+    clearInterval(intervalId)
+    Matter.Composite.remove(engine.world, rectangle)
+    const index = bodies.indexOf(rectangle)
+    if (index > -1) {
+      bodies.splice(index, 1)
+    }
+  },remaining_seconds * 1000)
 
 }
 
@@ -242,6 +270,14 @@ function setBubbleTextEvent(){
       lines.forEach((line: string, index: number) => {
         context.fillText(line, pos.x, startY + index * lineHeight)
       })
+
+      // Устанавливаем другой цвет для текста времени
+      context.fillStyle = 'white'
+      context.fillText(body.plugin.timer.toString(), pos.x , startY - 55)
+      // Возвращаем исходный цвет для остального текста
+      context.fillStyle = text_color
+
+
     })
 }
 
@@ -320,7 +356,7 @@ onUnmounted(() => {
     <canvas ref="canvas"></canvas>
     
     <Teleport to="#navbar-buttons">
-      <CreateBubbleDialog :handler="(text)=>send_new_message(text)">
+      <CreateBubbleDialog :handler="(data)=>send_new_message(data)">
       </CreateBubbleDialog>
     </Teleport>
   </div>

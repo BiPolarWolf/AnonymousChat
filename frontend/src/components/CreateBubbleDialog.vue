@@ -5,14 +5,17 @@ import Button from './Button.vue'
 
 
 const messageText = ref('')
-
+const seconds = ref(10)
 const props = defineProps<{
-  handler: (messageText: string) => void
+  handler: (message: {text: string, seconds: number}) => void
 }>()
 
 const handleSubmit = () => {
   if (messageText.value.trim()) {
-    props.handler(messageText.value)
+    props.handler({
+      text: messageText.value,
+      seconds: seconds.value
+    })
     messageText.value = ''
   }
 }
@@ -30,6 +33,7 @@ const handleSubmit = () => {
         placeholder="Введите текст сообщения"
         maxlength="150"
       ></textarea>
+      <input type="number" min="10" max="60" v-model.number="seconds" name="seconds">
       <Button style="width: 100%" size="small" type="submit">
         Отправить сообщение
       </Button>
