@@ -22,20 +22,22 @@ const handleSubmit = () => {
 <template>
   <DialogButton>
     <template #dialog_data>
-    <h3>Создать сообщение</h3>
     <form @submit.prevent="handleSubmit">
-      <input 
+      <textarea 
+        rows="5" 
         v-model="messageText" 
-        type="text" 
+        name="messageText"
         placeholder="Введите текст сообщения"
-        maxlength="50"
-      />
-      <Button size="small" type="submit">Создать</Button>
+        maxlength="150"
+      ></textarea>
+      <Button style="width: 100%" size="small" type="submit">
+        Отправить сообщение
+      </Button>
     </form>
     </template>
 
     <template #button_data>
-        <i class="fa fa-pencil"></i>
+        <i class="fa fa-pencil"></i> Написать сообщение
     </template>
   </DialogButton>
 </template>
@@ -51,10 +53,13 @@ form {
   gap: 15px;
 }
 
-input {
+textarea {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 6px;
-  font-size: 1em;
+  font-size: 1.5em;
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
 }
 </style>

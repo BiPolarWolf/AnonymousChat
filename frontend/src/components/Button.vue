@@ -24,12 +24,12 @@ defineProps<{
 
 .btn-normal {
   padding: 15px;
-  font-size: 30px;
+  font-size: 1.5em;
 }
 
 .btn-small {
   padding: 10px;
-  font-size: 25px;
+  font-size: 1.5em;
 }
 
 .btn:hover {

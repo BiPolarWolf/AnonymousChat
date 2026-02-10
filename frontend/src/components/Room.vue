@@ -1,10 +1,120 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref } from 'vue'
 import Matter from 'matter-js'
-import Button from './Button.vue'
 import CreateBubbleDialog from './CreateBubbleDialog.vue'
+import { getRandomBasicColor, getHoverColor, getContrastTextColor } from '../utils/color_utils'
+
+
 
 const canvas = ref<HTMLCanvasElement | null>(null)
+let socket = new WebSocket('ws://localhost:8000/ws/default')
+
+const history_url = 'http://localhost:8000/history/default'
+
+
+async function get_room_history(){
+    const response = await fetch(history_url)
+    const data = await response.json()
+    console.log(data)
+    for (let message of data){
+      createBubbleEvent(message)
+    }
+}
+
+
+function send_new_message(text:string){
+    let json_data  = JSON.stringify({text:text,color:message_color})
+    socket.send(json_data)
+}
+
+
+socket.onmessage = function(event) {
+  let message = JSON.parse(event.data)
+  // alert(`Данные получены с сервера: ${message}`)
+  createBubbleEvent(message)
+};
+
+
+type MessageType = {
+  text:string,
+  color:string,
+  timestamp:any
+}
+
+// функция которая отвечает за создание нового пузыря
+function createBubbleEvent(message: MessageType) {
+  
+  // Создаем временный canvas для измерения текста
+  const tempCanvas = document.createElement('canvas')
+  const tempContext = tempCanvas.getContext('2d')
+  if (!tempContext) return
+  
+  // Устанавливаем тот же шрифт, что используется в setBubbleTextEvent
+  tempContext.font = text_font
+  
+  // Максимальная ширина пузыря
+  const maxWidth = 400
+  const padding = 40
+  const lineHeight = 30
+  
+  // Разбиваем текст на строки (учитываем \n и автоперенос)
+  const paragraphs = message.text.split('\n')
+  const lines: string[] = []
+  
+  paragraphs.forEach(paragraph => {
+    const words = paragraph.split(' ')
+    let currentLine = ''
+    
+    words.forEach(word => {
+      const testLine = currentLine ? currentLine + ' ' + word : word
+      const metrics = tempContext.measureText(testLine)
+      
+      if (metrics.width > maxWidth - padding && currentLine) {
+        lines.push(currentLine)
+        currentLine = word
+      } else {
+        currentLine = testLine
+      }
+    })
+    if (currentLine) lines.push(currentLine)
+  })
+  
+  // Вычисляем размеры пузыря
+  const bubbleWidth = Math.min(maxWidth, Math.max(...lines.map(line => tempContext.measureText(line).width)) + padding)
+  const bubbleHeight = lines.length * lineHeight + padding
+  
+  const x = Math.random() * (window.innerWidth - bubbleWidth) + bubbleWidth / 2
+  const y = Math.random() * (window.innerHeight - bubbleHeight) + bubbleHeight / 2
+  
+
+  const rectangle = Matter.Bodies.rectangle(
+    x, y, bubbleWidth, bubbleHeight, {
+    chamfer: { radius: border_radius_message },
+    restitution: 1,
+    friction: 0,
+    frictionAir: 0.05,
+    density: 0.001,
+    inertia: Infinity,
+    render: {
+      fillStyle: message['color'],
+    },
+    label: message['text'],
+    plugin : {
+      originColor : message['color'],
+      lines: lines,
+      opacity: 0,
+      scale: 0.5
+    }
+  }
+  )
+
+
+  bodies.push(rectangle)
+  composite.add(engine.world,rectangle)
+
+}
+
+
 
 let engine: Matter.Engine
 let render: Matter.Render
@@ -18,8 +128,9 @@ let hoveredBodyId : number | null = null;
 
 // let createMessageTime_in_second = 10
 let border_radius_message = 20
-let message_box_color = '#616161'
-let message_box_hover = '#706f6f'
+let message_color = getRandomBasicColor()
+// let message_color = '#616161'
+// let message_color_hover = '#706f6f'
 let text_font = '25px sans-serif'
 let room_background_color = '#2b2b2b'
 
@@ -28,7 +139,7 @@ const composite = Matter.Composite
 
 
 
-const wallOptions = { isStatic: true, render: { fillStyle: room_background_color} }
+const wallOptions = { isStatic: true, render: { fillStyle: '#383838'} }
 
 let topWall: Matter.Body
 let bottomWall: Matter.Body
@@ -36,7 +147,7 @@ let leftWall: Matter.Body
 let rightWall: Matter.Body
 
 const createWalls = () => {
-  topWall = Matter.Bodies.rectangle(window.innerWidth / 2, 0, window.innerWidth, 230, wallOptions)
+  topWall = Matter.Bodies.rectangle(window.innerWidth / 2, 0, window.innerWidth, 240, wallOptions)
   bottomWall = Matter.Bodies.rectangle(window.innerWidth / 2, window.innerHeight, window.innerWidth, 50, wallOptions)
   leftWall = Matter.Bodies.rectangle(0, window.innerHeight / 2, 50, window.innerHeight, wallOptions)
   rightWall = Matter.Bodies.rectangle(window.innerWidth, window.innerHeight / 2, 50, window.innerHeight, wallOptions)
@@ -69,17 +180,6 @@ const set_adaptive = () => {
 }
 
 
-// функция лопающая пузырь 
-const popBubbleEvent = (event:any) =>{
-    const body = event.source.body; // Тело, на которое нажали
-    if (body) {
-      Matter.Composite.remove(engine.world, body)
-        const index = bodies.indexOf(body)
-        if (index > -1) bodies.splice(index, 1)
-        console.log("Пузырь лопнул!")
-    }
-}
-
 // функция отрабатывающая когда курсор на каком то пузыре 
 const mouseOnBubbleEvent = (event:any) =>{
         // Получаем все тела из мира (кроме стен)
@@ -103,93 +203,52 @@ const mouseOnBubbleEvent = (event:any) =>{
 
 
 
-// функция которая отвечает за создание нового пузыря
-function createBubbleEvent(text: string) {
-  
-  // Создаем временный canvas для измерения текста
-  const tempCanvas = document.createElement('canvas')
-  const tempContext = tempCanvas.getContext('2d')
-  if (!tempContext) return
-  
-  // Устанавливаем тот же шрифт, что используется в setBubbleTextEvent
-  tempContext.font = text_font
-  
-  // Измеряем ширину текста
-  const textMetrics = tempContext.measureText(text)
-  const textWidth = textMetrics.width
-  
-  // Добавляем отступы (padding) к ширине текста
-  const padding = 40
-  const bubbleWidth =  textWidth + padding
-  const bubbleHeight = 60
-  
-  const x = Math.random() * (window.innerWidth - bubbleWidth) + bubbleWidth / 2
-  const y = Math.random() * (window.innerHeight - bubbleHeight) + bubbleHeight / 2
-  
-
-  const rectangle = Matter.Bodies.rectangle(
-    x, y, bubbleWidth, bubbleHeight, {
-    chamfer: { radius: border_radius_message },
-    restitution: 1,
-    friction: 0,
-    frictionAir: 0.05,
-    density: 0.001,
-    render: {
-      fillStyle: message_box_color,
-    },
-    label: text
-  }
-  )
-  
-
-  bodies.push(rectangle)
-  composite.add(engine.world,rectangle)
-}
 
 // функция устанавливает текст на пузыре после создания
 function setBubbleTextEvent(){
     const context = render.canvas.getContext('2d')
     if (!context) return
     
+
     bodies.forEach(body => {
+
 
       // Проверяем: совпадает ли ID этого тела с тем, что под мышкой?
       const isHovered = (body.id === hoveredBodyId);
-      
+
+      const body_color = body.plugin.originColor
+      const hover_color = getHoverColor(body_color)
+      const text_color = getContrastTextColor(body_color)
+
+
       // Плавно меняем цвет пузыря при наведении
       if (isHovered && body.label) {
-        body.render.fillStyle = message_box_hover; // более светлый оттенок
+        body.render.fillStyle = hover_color; // более светлый оттенок
       } else if (body.label) {
-        body.render.fillStyle = message_box_color; // исходный цвет
+        body.render.fillStyle = body_color
       }
  
       const pos = body.position
-      context.fillStyle = '#ffffff'
+      context.fillStyle = text_color 
       context.font = text_font
       context.textAlign = 'center'
       context.textBaseline = 'middle'
-      context.fillText(body.label, pos.x, pos.y)
+      
+      // Рисуем текст по строкам
+      const lines = body.plugin.lines || [body.label]
+      const lineHeight = 30
+      const startY = pos.y - ((lines.length - 1) * lineHeight) / 2
+      
+      lines.forEach((line: string, index: number) => {
+        context.fillText(line, pos.x, startY + index * lineHeight)
+      })
     })
 }
 
-// функция которая отвечает за перемещение пузыря в пространстве
-function applyFloatingForces() {
 
-  bodies.forEach((body, index) => {
-    const time = Date.now() * 0.00001
-    const floatX = Math.sin(time + index) * 0.00007
-    const floatY = Math.cos(time + index) * 0.00007
 
-    Matter.Body.applyForce(body, body.position, {
-      x: floatX,
-      y: floatY
-    })
-  })
-}
-
-onMounted(() => {
+onMounted(async () => {
   if (!canvas.value) return
-
 
 
   // создаем экземпляр движка
@@ -222,7 +281,7 @@ onMounted(() => {
   // включаем отрисовочника
   Matter.Runner.run(runner, engine)
 
-  Matter.Events.on(engine, 'beforeUpdate', applyFloatingForces)
+
   Matter.Events.on(render, 'afterRender',setBubbleTextEvent)
 
 
@@ -236,11 +295,13 @@ onMounted(() => {
     }
   });
 
-  // Предположим, mouseConstraint уже создан и добавлен в Composite
-  Matter.Events.on(mouseConstraint, 'mousedown', popBubbleEvent);
+  composite.add(engine.world, mouseConstraint);
+
   Matter.Events.on(mouseConstraint, 'mousemove', mouseOnBubbleEvent);
 
   set_adaptive()
+
+  await get_room_history()
 
   // intervalId = setInterval(createBubbleEvent, (createMessageTime_in_second * 1000 ))
   // createBubbleEvent()
@@ -259,9 +320,8 @@ onUnmounted(() => {
     <canvas ref="canvas"></canvas>
     
     <Teleport to="#navbar-buttons">
-      <CreateBubbleDialog :handler="createBubbleEvent">
+      <CreateBubbleDialog :handler="(text)=>send_new_message(text)">
       </CreateBubbleDialog>
-      <Button @click="() => console.log('Вторая кнопка')">🔄 Сброс баблов</Button>
     </Teleport>
   </div>
 </template>

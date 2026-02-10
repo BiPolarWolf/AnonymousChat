@@ -17,7 +17,7 @@
   height: 90px;
   background-color: rgba(30, 30, 30, 0.588);
   backdrop-filter: blur(10px);
-  padding: 10px 20px;
+  padding: 1px 20px;
   color: white;
   z-index: 10;
   display: flex;

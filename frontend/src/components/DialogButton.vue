@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 
 import Button from './Button.vue'
 
@@ -7,13 +7,22 @@ const isOpen = ref(false)
 
 
 const toggleDialog = () => {
-  if (isOpen.value) {
-    isOpen.value = false
-  } else {
-    isOpen.value = true
-    
+  isOpen.value = !isOpen.value
+}
+
+const handleEscape = (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && isOpen.value) {
+    toggleDialog()
   }
 }
+
+onMounted(() => {
+  window.addEventListener('keydown', handleEscape)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleEscape)
+})
 </script>
 
 <template>
@@ -28,10 +37,15 @@ const toggleDialog = () => {
       <div class="overlay" v-if="isOpen" ></div>
 
       <div v-if="isOpen" ref="dialog" class="dialog">
+
+        <div class="close-btn-container">
+        <button class="close-btn" @click="toggleDialog">
+          <i class="fa fa-times"></i>
+        </button>
+        </div>
         <div style="margin: 1em;">
           <slot name="dialog_data"></slot>
         </div>
-        <Button size="small" @click="toggleDialog" >Закрыть</Button>
       </div>
     </Teleport>
   </div>
@@ -54,7 +68,6 @@ const toggleDialog = () => {
 .dialog {
   color: aliceblue;
   text-align: center;
-  font-size: 2em;
   position: fixed;
   top: 50%;
   left: 50%;
@@ -62,10 +75,27 @@ const toggleDialog = () => {
   background: rgba(22, 22, 22, 0.763);
   border-radius: 8px;
   padding: 20px;
-  min-width: 300px;
-  max-width: 90vw;
-  max-height: 90vh;
+  width: 600px;
   z-index: 1000;
+}
+
+.close-btn {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px 10px;
+}
+
+.close-btn:hover {
+  color: #ff4444;
+}
+
+.close-btn-container {
+  display: flex;
+  justify-content: flex-end;
 }
 
 </style>

@@ -31,9 +31,11 @@ class ConnectionManager:
             self.active_connections[room].remove(websocket)
 
     async def broadcast(self, message: dict, room: str):
+        print(message)
+
         message['timestamp'] = time.time()
         msg_key = f"chat_msg:{room}:{message['timestamp']}"
-        await r.setex(msg_key, 600, json.dumps(message))
+        await r.setex(msg_key, 100, json.dumps(message))
         
         if room in self.active_connections:
             for connection in self.active_connections[room]:
