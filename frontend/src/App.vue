@@ -1,12 +1,9 @@
 <script setup lang="ts">
-import Room from './components/Room.vue';
-import Navbar from './components/Navbar.vue';
-
+import RoomPhaser from './components/RoomPhaser.vue';
 
 </script>
 
 <template>
-    <Navbar></Navbar>
-    <Room></Room>
+    <RoomPhaser></RoomPhaser>
 </template>
 
