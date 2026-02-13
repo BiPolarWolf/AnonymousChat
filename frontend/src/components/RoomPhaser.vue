@@ -2,6 +2,7 @@
 import { onMounted, onUnmounted, ref } from 'vue'
 import Phaser from 'phaser'
 import { BubbleManager } from '../classes/BubbleManager'
+import { Navbar } from '../classes/Navbar'
 
 type MessageType = {
   text: string,
@@ -12,6 +13,16 @@ type MessageType = {
 const gameContainer = ref<HTMLDivElement | null>(null)
 let game: Phaser.Game | null = null
 let socket: WebSocket | null = null
+
+
+
+// Функция для отправки сообщений
+const sendMessage = (text: string, color: string) => {
+  if (socket?.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({ text, color, seconds: 1 }))
+  }
+}
+
 
 class RoomScene extends Phaser.Scene {
 
@@ -26,25 +37,20 @@ class RoomScene extends Phaser.Scene {
 
   create() {
     const bubble_manager = new BubbleManager(this)
-
+    bubble_manager.physics_on()
+    new Navbar(this)
 
     this.cameras.main.setBackgroundColor('#2b2b2b')
-
-    const note = this.add.image(100, 200, 'note' ).setScale(0.3)
-
-    this.tweens.add({
-      targets: note,
-      y: 210,
-      duration: 1000,
-      ease: 'Sine.inOut',
-      yoyo: true,
-      loop: -1
-    });
 
     // Слушаем события новых сообщений
     this.game.events.on('newMessage', (message: MessageType) => {
       const color = parseInt(message.color.replace('#', '0x'))
       bubble_manager.addBubble(message.text, color)
+    })
+
+    // Слушаем событие отправки сообщения
+    this.game.events.on('sendMessage', (text: string, color: string) => {
+      sendMessage(text, color)
     })
   }
   update() {
@@ -71,7 +77,7 @@ onMounted(async () => {
       default: 'arcade',
       arcade: {
         gravity: { y: 0 , x:0},
-        debug: false
+        debug: true
       }
     },
     scene: RoomScene
@@ -101,12 +107,7 @@ onUnmounted(() => {
   }
 })
 
-// Функция для отправки сообщений
-const sendMessage = (text: string, color: string) => {
-  if (socket?.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({ text, color, seconds: 100 }))
-  }
-}
+
 
 defineExpose({ sendMessage })
 </script>

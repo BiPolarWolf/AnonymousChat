@@ -1,18 +1,30 @@
 import Phaser from 'phaser'
+import { BubblePhysics } from './BubblePhysics'
+import type { PhysicsMode } from './BubblePhysics'
 
 export class BubbleManager {
 
 
     public scene : Phaser.Scene
     
-    // физические свойства каждого 
+    /**
+     * Максимальная скорость баблов (рекомендуется 50-200)
+     */
     readonly velocity : number
+    /**
+     * Коэффициент отскока при столкновении (0-1, где 1 = полный отскок)
+     */
     readonly bounce : number
+    /**
+     * Масса баблов (не используется, зарезервировано)
+     */
     readonly mass : number 
+    private bubbles: Phaser.GameObjects.Container[] = []
+    private physicsMode: PhysicsMode = 'static'
 
 
     constructor(scene:Phaser.Scene) {
-        this.velocity = 0.5
+        this.velocity = 100
         this.bounce = 0.5
         this.mass = 1
         this.scene = scene
@@ -28,7 +40,7 @@ export class BubbleManager {
         // Создаем текст в 0, 0 (локальные координаты контейнера)
         const x = 0
         const y = 0
-        return this.scene.add.text(x, y, text, this.textStyle)
+        return this.scene.add.text(x, y, text, this.textStyle).setOrigin(0.5)
     }
 
     private getRandomCoordinates(){
@@ -61,8 +73,54 @@ export class BubbleManager {
         const geometryObj = this.createBackground(textObj,color)
 
         const container = this.scene.add.container(x, y, [geometryObj, textObj]);
+        
+        if (this.physicsMode !== 'static') {
+            BubblePhysics.apply(
+                this.scene,
+                container,
+                textObj,
+                this.physicsMode,
+                this.velocity,
+                this.bounce,
+                this.bubbles
+            )
+        }
+        
+        this.bubbles.push(container)
         return container;
 
+    }
+
+    /**
+     * Устанавливает режим физики для всех баблов
+     * @param mode - 'static' | 'floating' | 'calm' | 'bouncy'
+     */
+    setPhysicsMode(mode: PhysicsMode) {
+        this.physicsMode = mode
+        
+        this.bubbles.forEach(bubble => {
+            const textObj = bubble.list[1] as Phaser.GameObjects.Text
+            BubblePhysics.apply(
+                this.scene,
+                bubble,
+                textObj,
+                mode,
+                this.velocity,
+                this.bounce,
+                this.bubbles
+            )
+        })
+        
+        if (mode !== 'static') {
+            this.scene.physics.add.collider(this.bubbles, this.bubbles)
+        }
+    }
+
+    /**
+     * @deprecated Используйте setPhysicsMode('bouncy')
+     */
+    physics_on() {
+        this.setPhysicsMode('bouncy')
     }
 
 
